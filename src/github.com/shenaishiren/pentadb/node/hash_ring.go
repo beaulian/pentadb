@@ -49,7 +49,7 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) error {
 	// check nodes' count
 	nodesCount := len(nodes)
 	if nodesCount < 3 {
-		return errors.New("nodes number must be greater than 3")
+		return errors.New("node number must be greater than 3")
 	}
 	// check weights and initialize it
 	if weights == nil {
