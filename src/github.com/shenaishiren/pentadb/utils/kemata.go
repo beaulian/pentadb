@@ -1,15 +1,15 @@
-package node
+package utils
 
 import "crypto/md5"
 
-func md5Hash(key string) []byte {
+func Md5Hash(key string) []byte {
 	md := md5.New()
 	md.Write([]byte(key))
 	return md.Sum(nil)
 }
 
-func kemataHash(key string, i int) uint32 {
-	digest := md5Hash(key)
+func KemataHash(key string, i int) uint32 {
+	digest := Md5Hash(key)
 	// calculate the hash value
 	// each four bytes constitute a 32-bit integer
 	// then add the four 32-bit integers to the final hash value

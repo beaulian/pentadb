@@ -6,6 +6,8 @@ package node
 import (
 	"math"
 	"math/rand"
+
+	"github.com/shenaishiren/pentadb/utils"
 )
 
 const (
@@ -13,6 +15,7 @@ const (
 	defaultWeight = 1
 	maxLevel = 32
 )
+
 
 type HashRing struct {
 	rnd *rand.Rand
@@ -40,7 +43,7 @@ func (hr *HashRing) getVNodeCount(weight int, averageWeight float64) int {
 	return int(math.Floor(float64(defaultFactor * weight) / averageWeight))
 }
 
-// create a hashring
+// create a hash ring
 func (hr *HashRing) init(nodes []string, weights map[string]int) error {
 	// check weights and initialize it
 	if weights == nil {
@@ -118,7 +121,7 @@ func (hr *HashRing) addNode(nodeName string, vNodeCount int) error {
 	// four virtual nodes per group
 	for i := 0; i < vNodeCount / 4; i++ {
 		for j := 0; j < 4; j++ {
-			key := kemataHash(nodeName, j)
+			key := utils.KemataHash(nodeName, j)
 			hr.insertNode(nodeName, key)
 		}
 	}
@@ -156,7 +159,7 @@ func (hr *HashRing) deleteNode(node *Node) error {
 func (hr *HashRing) deleteNodeByName(nodeName string, vNodeCount int) error {
 	for i := 0; i < vNodeCount / 4; i++ {
 		for j := 0; j < 4; j++ {
-			key := kemataHash(nodeName, j)
+			key := utils.KemataHash(nodeName, j)
 			hr.removeNode(key)
 		}
 	}
