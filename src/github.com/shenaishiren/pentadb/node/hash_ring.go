@@ -4,6 +4,7 @@
 package node
 
 import (
+	"errors"
 	"math"
 	"math/rand"
 
@@ -45,6 +46,11 @@ func (hr *HashRing) getVNodeCount(weight int, averageWeight float64) int {
 
 // create a hash ring
 func (hr *HashRing) init(nodes []string, weights map[string]int) error {
+	// check nodes' count
+	nodesCount := len(nodes)
+	if nodesCount < 3 {
+		return errors.New("nodes number must be greater than 3")
+	}
 	// check weights and initialize it
 	if weights == nil {
 		weights := make(map[string]int)
@@ -57,7 +63,7 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) error {
 	for _, weight := range weights {
 		totalWeight += weight
 	}
-	averageWeight := float64(totalWeight / len(nodes))
+	averageWeight := float64(totalWeight / nodesCount)
 	// generate ring
 	for _, node := range nodes {
 		weight := weights[node]
