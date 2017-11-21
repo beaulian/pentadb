@@ -1,15 +1,16 @@
-package utils
+package client
 
-import "crypto/md5"
-
-func Md5Hash(key string) []byte {
-	md := md5.New()
-	md.Write([]byte(key))
-	return md.Sum(nil)
-}
+import (
+	"log"
+	"net"
+	"time"
+	"crypto/md5"
+)
 
 func KemataHash(key string, i int) uint32 {
-	digest := Md5Hash(key)
+	md := md5.New()
+	md.Write([]byte(key))
+	digest := md.Sum(nil)
 	// calculate the hash value
 	// each four bytes constitute a 32-bit integer
 	// then add the four 32-bit integers to the final hash value
@@ -21,3 +22,14 @@ func KemataHash(key string, i int) uint32 {
 
 	return hash
 }
+
+func Reachable(ipaddr string, timeout time.Duration) bool {
+	_, err := net.DialTimeout("tcp", ipaddr, timeout)
+	if err != nil {
+		log.Fatalf("node: %s is unreachable due to error: %s", ipaddr, err)
+		return false
+	}
+	return true
+}
+
+
