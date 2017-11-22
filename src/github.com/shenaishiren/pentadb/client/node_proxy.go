@@ -106,29 +106,3 @@ func (np *NodeProxy) get(key []byte) ([]byte, error) {
 func (np *NodeProxy) delete(key []byte) error {
 	return np.rpcClient.Call("Node.delete", key, nil)
 }
-
-//func (np *NodeProxy) setReplicas(rNode *Node, replica int) error {
-//	// we adopt a random method to choose N-1 nodes
-//	// which makes it fairer, then append itself to the
-//	// N-1 nodes
-//	replicas := make([]*Node, replica)
-//	// rNode is a closure
-//	filterFunc := func(i interface{}) bool {
-//		return i.(*Node).Ipaddr != rNode.Ipaddr
-//	}
-//	temp, _ := utils.RandomChoice(utils.Filter(filterFunc, np.hr.nodes.Values()), replica)
-//	for _, v := range temp {
-//		replicas = append(replicas, v.(*Node))
-//	}
-//	replicas = append(replicas, rNode)
-//	rNode.Replicas = replicas
-//
-//	return nil
-//}
-//
-//func (np *NodeProxy) getProperNode(key string) (*Node, error) {
-//	hashKey := KemataHash(key, 0)
-//	vNode, err := np.hr.findProperNode(hashKey)
-//
-//	return vNode.RNode, err
-//}

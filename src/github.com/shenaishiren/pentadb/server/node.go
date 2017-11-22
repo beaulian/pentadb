@@ -49,23 +49,23 @@ const (
 )
 
 type Node struct {
-	ipaddr string
+	Ipaddr string
 
-	state NodeStatus
+	State NodeStatus
 
-	otherNodes []string
+	OtherNodes []string
 
-	replicaNodes []string
+	ReplicaNodes []string
 
-	db *leveldb.DB
+	DB *leveldb.DB
 
 	mutex *sync.Mutex
 }
 
 func NewNode(ipaddr string) *Node {
 	return &Node {
-		ipaddr: ipaddr,
-		state: Running,
+		Ipaddr: ipaddr,
+		State: Running,
 		mutex: new(sync.Mutex),
 	}
 }
@@ -88,21 +88,24 @@ func (n *Node) randomChoice(list []string, k int) ([]string, error) {
 
 
 func (n *Node) init(args *args.InitArgs, result *[]byte) error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	nodes := args.Nodes
 	otherNodes := make([]string, len(nodes) - 1)
 	for _, node := range nodes {
-		if node != n.ipaddr {
+		if node != n.Ipaddr {
 			otherNodes = append(otherNodes, node)
 		}
 	}
 
-	n.otherNodes = otherNodes
+	n.OtherNodes = otherNodes
 	replicaNodes, err := n.randomChoice(otherNodes, args.Replicas)
 	if err != nil {
 		return err
 	}
-	replicaNodes = append(replicaNodes, n.ipaddr)
-	n.replicaNodes = replicaNodes
+	replicaNodes = append(replicaNodes, n.Ipaddr)
+	n.ReplicaNodes = replicaNodes
 	return nil
 }
 
@@ -110,33 +113,35 @@ func (n *Node) addNode(node string, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	n.otherNodes = append(n.otherNodes, node)
+	n.OtherNodes = append(n.OtherNodes, node)
+	return nil
 }
 
-func (n *Node) removeNode(node string, result *error) {
+func (n *Node) removeNode(node string, result *error) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
 	var j = 0
 	var flag = false
-	for _, otherNode := range n.otherNodes {
+	for _, otherNode := range n.OtherNodes {
 		if otherNode != node {
-			n.otherNodes[j] = otherNode
+			n.OtherNodes[j] = otherNode
 			j++
 		} else {
 			flag = true
 		}
 	}
 	if flag {
-		n.otherNodes = n.otherNodes[0:len(n.otherNodes) - 1]
+		n.OtherNodes = n.OtherNodes[0:len(n.OtherNodes) - 1]
 	}
+	return nil
 }
 
 func (n *Node) put(args *args.KVArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	err := n.db.Put(args.Key, args.Value, nil)
+	err := n.DB.Put(args.Key, args.Value, nil)
 	return err
 }
 
@@ -144,7 +149,7 @@ func (n *Node) get(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	res, err := n.db.Get(key, nil)
+	res, err := n.DB.Get(key, nil)
 	result = &res
 	return err
 }
@@ -153,6 +158,6 @@ func (n *Node) delete(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	err := n.db.Delete(key, nil)
+	err := n.DB.Delete(key, nil)
 	return err
 }

@@ -1,16 +1,16 @@
 // Contains the implementation of server-command of levelDB
-package commands
+package main
 
 import (
-	"os"
 	"log"
 	"net"
+	"flag"
 	"net/http"
 	"net/rpc"
-	"github.com/urfave/cli"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/server"
+	"fmt"
 )
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
@@ -24,26 +24,20 @@ Options:
 `
 
 type Server struct {
-	node *server.Node
+	Node *server.Node
 }
 
-func (s *Server) initRPC(path string) error {
-	s.node = server.NewNode("")
+func (s *Server) listen(port string, path string) error {
+	s.Node = server.NewNode("127.0.0.1:" + port)
 	db, err := leveldb.OpenFile(path, nil)
 	defer db.Close()
 
 	if err != nil {
 		return err
 	}
-	s.node.DB = db
-	rpc.Register(s.node)
+	s.Node.DB = db
+	rpc.Register(s.Node)
 	rpc.HandleHTTP()      // bind prc to http service
-
-	return nil
-}
-
-func (s *Server) listen(port string, path string) {
-	s.initRPC(path)
 
 	l, e := net.Listen("tcp", ":" + port)
 	if e != nil {
@@ -53,39 +47,28 @@ func (s *Server) listen(port string, path string) {
 		0x1B, "listening at http://0.0.0.0:" + port,
 		0x1B)
 	http.Serve(l, nil)
+	return nil
 }
 
 
 func main() {
-	app := cli.NewApp()
+	var (
+		help bool
+		port string
+		path string
+	)
+	flag.BoolVar(&help, "h", false, "Display this help message and exit")
+	flag.StringVar(&port, "p", "4567", "The port to listen on (default: 4567)")
+	flag.StringVar(&path, "a", opt.DeafultPath, "The path to use for the LevelDB store")
 
-	app.Flags = []cli.Flag {
-		cli.BoolFlag{
-			Name: "help, h",
-			Hidden: true,
-			Usage: "Help prompt",
-		},
-		cli.StringFlag{
-			Name: "port, p",
-			Value: "4567",
-			Usage: "Port for listening",
-		},
-		cli.StringFlag{
-			Name: "path, a",
-			Value: opt.DeafultPath,
-			Usage: "Path for levelDB",
-		},
+	// run
+	flag.Parse()
+
+	// help command
+	if help {
+		fmt.Print(helpPrompt)
+	} else {
+		server := new(Server)
+		server.listen(port, path)
 	}
-
-	app.Action = func(c *cli.Context) error {
-		if c.Bool("help") {
-			log.Print(helpPrompt)
-		} else {
-			server := new(Server)
-			server.listen(c.String("port"), c.String("path"))
-		}
-
-		return nil
-	}
-	app.Run(os.Args)
 }
