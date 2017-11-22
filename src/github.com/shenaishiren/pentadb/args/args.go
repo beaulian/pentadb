@@ -1,4 +1,6 @@
-BSD 3-Clause License
+// This package implement all argument types that rpc need
+
+/* BSD 3-Clause License
 
 Copyright (c) 2017, Guan Jiawen, Li Lundong
 All rights reserved.
@@ -27,3 +29,27 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+package args
+
+type InitArgs struct {
+	// a array consisting of each node's ipaddr
+	Nodes []string
+
+	// replicas
+	Replicas int
+}
+
+type KVArgs struct {
+	Key []byte
+
+	Value []byte
+}
+
+type KVArrayArgs struct {
+	KVs []KVArgs
+}
+
+
+

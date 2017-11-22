@@ -1,4 +1,10 @@
-BSD 3-Clause License
+// Contains the interface and implementation of Node
+// The `Node` struct is designed for client which is distinguished
+// with the `Node` struct in server. When a node is added to cluster,
+// client will maintain a connection with every node, so it's necessary
+// to record the status of each node.
+
+/* BSD 3-Clause License
 
 Copyright (c) 2017, Guan Jiawen, Li Lundong
 All rights reserved.
@@ -27,3 +33,47 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+package client
+
+import (
+	"time"
+
+	"github.com/satori/go.uuid"
+)
+
+var timeout = 2 * time.Second
+
+
+type Node struct {
+	// The name of node, maybe used for some commands
+	// like `pentadb nodes list`
+	Name string
+
+	// The address of node, format as `<ip>:<port>`
+	Ipaddr string
+
+	// creating time
+	Ctime time.Time
+
+	// Node Proxy
+	Proxy *NodeProxy
+}
+
+func NewNode(ipaddr string) *Node {
+	node := &Node {
+		Name:     uuid.NewV1().String(),
+		Ipaddr:   ipaddr,
+		Ctime:    time.Now(),
+	}
+	if !Reachable(ipaddr, timeout) {
+		return nil
+	}
+	proxy := NewNodeProxy(node)
+	if proxy == nil {
+		return nil
+	}
+	node.Proxy = proxy
+	return node
+}
