@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
 import (
-	"log"
+	"os"
 	"net"
 	"flag"
 	"net/http"
@@ -42,8 +42,11 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/server"
+	"github.com/shenaishiren/pentadb/log"
 	"fmt"
 )
+
+var LOG = log.NewLog(os.Stdout)
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
 
@@ -62,9 +65,9 @@ type Server struct {
 func (s *Server) listen(port string, path string) error {
 	s.Node = server.NewNode("127.0.0.1:" + port)
 	db, err := leveldb.OpenFile(path, nil)
-	defer db.Close()
 
 	if err != nil {
+		LOG.Error(err.Error())
 		return err
 	}
 	s.Node.DB = db
@@ -73,11 +76,9 @@ func (s *Server) listen(port string, path string) error {
 
 	l, e := net.Listen("tcp", ":" + port)
 	if e != nil {
-		log.Fatal("listen error:", e)
+		LOG.Error("listen error:", e)
 	}
-	log.Printf("%c[1;40;32m%s%c[0m",
-		0x1B, "listening at http://0.0.0.0:" + port,
-		0x1B)
+	LOG.Info("listening at http://0.0.0.0:" + port)
 	http.Serve(l, nil)
 	return nil
 }

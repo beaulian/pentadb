@@ -2,7 +2,7 @@ package opt
 
 const (
 	DefaultReplicas = 3                 // default replicas for raft algorithm
-	DeafultPath = "/usr/local/pentadb"  // default path for levelDB
+	DeafultPath = "/tmp/pentadb"  // default path for levelDB
 	DefaultProtocol = "tcp"
 )
 
