@@ -46,7 +46,7 @@ import (
 	"fmt"
 )
 
-var LOG = log.NewLog(os.Stdout)
+var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
 
@@ -67,7 +67,7 @@ func (s *Server) listen(port string, path string) error {
 	db, err := leveldb.OpenFile(path, nil)
 
 	if err != nil {
-		LOG.Error(err.Error())
+		LOG.Error("open levelDB error: " + err.Error())
 		return err
 	}
 	s.Node.DB = db
@@ -76,10 +76,11 @@ func (s *Server) listen(port string, path string) error {
 
 	l, e := net.Listen("tcp", ":" + port)
 	if e != nil {
-		LOG.Error("listen error:", e)
+		LOG.Error("listen error: " + err.Error())
 	}
-	LOG.Info("listening at http://0.0.0.0:" + port)
+	LOG.Info("listening at 0.0.0.0:%s", port)
 	http.Serve(l, nil)
+
 	return nil
 }
 
@@ -101,7 +102,7 @@ func main() {
 	if help {
 		fmt.Print(helpPrompt)
 	} else {
-		server := new(Server)
-		server.listen(port, path)
+		svr := new(Server)
+		svr.listen(port, path)
 	}
 }
