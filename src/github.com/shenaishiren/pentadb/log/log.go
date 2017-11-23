@@ -141,7 +141,9 @@ func (l *Log) wrapper(text string) string {
 			buf.WriteString(strconv.Itoa(int(month)))
 			buf.WriteString("/")
 			buf.WriteString(strconv.Itoa(day))
-		} else if (l.flag & Ltime) != 0 {
+		}
+		if (l.flag & Ltime) != 0 {
+			buf.WriteString(" ")
 			hour, min, sec := t.Clock()
 			buf.WriteString(strconv.Itoa(hour))
 			buf.WriteString(":")

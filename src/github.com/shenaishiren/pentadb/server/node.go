@@ -87,7 +87,7 @@ func (n *Node) randomChoice(list []string, k int) ([]string, error) {
 }
 
 
-func (n *Node) init(args *args.InitArgs, result *[]byte) error {
+func (n *Node) Init(args *args.InitArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -109,7 +109,7 @@ func (n *Node) init(args *args.InitArgs, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) addNode(node string, result *[]byte) error {
+func (n *Node) AddNode(node string, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -117,7 +117,7 @@ func (n *Node) addNode(node string, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) removeNode(node string, result *error) error {
+func (n *Node) RemoveNode(node string, result *error) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -137,7 +137,7 @@ func (n *Node) removeNode(node string, result *error) error {
 	return nil
 }
 
-func (n *Node) put(args *args.KVArgs, result *[]byte) error {
+func (n *Node) Put(args *args.KVArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -145,7 +145,7 @@ func (n *Node) put(args *args.KVArgs, result *[]byte) error {
 	return err
 }
 
-func (n *Node) get(key []byte, result *[]byte) error {
+func (n *Node) Get(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -154,7 +154,7 @@ func (n *Node) get(key []byte, result *[]byte) error {
 	return err
 }
 
-func (n *Node) delete(key []byte, result *[]byte) error {
+func (n *Node) Delete(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 

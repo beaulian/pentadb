@@ -36,11 +36,13 @@ package client
 
 import (
 	"fmt"
+	"time"
 	"errors"
 	"net/rpc"
 
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/args"
+	nrpc "github.com/shenaishiren/pentadb/rpc"
 )
 
 type NodeProxy struct {
@@ -55,7 +57,7 @@ type NodeProxy struct {
 }
 
 func NewNodeProxy(node *Node) *NodeProxy {
-	client, err := rpc.DialHTTP(opt.DefaultProtocol, node.Ipaddr)
+	client, err := nrpc.DialTimeout(opt.DefaultProtocol, node.Ipaddr, time.Second * 30)
 	if err != nil {
 		return nil
 	}
@@ -81,28 +83,28 @@ func (np *NodeProxy) init(nodeIpaddrs []string, option *opt.NodeProxyOptions) er
 		Nodes: nodeIpaddrs, Replicas: replicas,
 	}
 
-	return np.rpcClient.Call("Node.init", args, nil)
+	return np.rpcClient.Call("Node.Init", args, nil)
 }
 
 func (np *NodeProxy) addNode(nodeIpaddr string) error {
-	return np.rpcClient.Call("Node.addNode", nodeIpaddr, nil)
+	return np.rpcClient.Call("Node.AddNode", nodeIpaddr, nil)
 }
 
 func (np *NodeProxy) removeNode(nodeIpaddr string) error {
-	return np.rpcClient.Call("Node.removeNode", nodeIpaddr, nil)
+	return np.rpcClient.Call("Node.RemoveNode", nodeIpaddr, nil)
 }
 
 func (np *NodeProxy) put(key []byte, value []byte) error {
 	kvArgs := &args.KVArgs{key, value}
-	return np.rpcClient.Call("Node.put", kvArgs, nil)
+	return np.rpcClient.Call("Node.Put", kvArgs, nil)
 }
 
 func (np *NodeProxy) get(key []byte) ([]byte, error) {
 	var result []byte
-	err := np.rpcClient.Call("Node.get", key, &result)
+	err := np.rpcClient.Call("Node.Get", key, &result)
 	return result, err
 }
 
 func (np *NodeProxy) delete(key []byte) error {
-	return np.rpcClient.Call("Node.delete", key, nil)
+	return np.rpcClient.Call("Node.Delete", key, nil)
 }

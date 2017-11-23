@@ -36,14 +36,13 @@ package main
 import (
 	"os"
 	"net"
+	"fmt"
 	"flag"
-	"net/http"
-	"net/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/shenaishiren/pentadb/rpc"
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/server"
 	"github.com/shenaishiren/pentadb/log"
-	"fmt"
 )
 
 var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
@@ -72,14 +71,22 @@ func (s *Server) listen(port string, path string) error {
 	}
 	s.Node.DB = db
 	rpc.Register(s.Node)
-	rpc.HandleHTTP()      // bind prc to http service
 
-	l, e := net.Listen("tcp", ":" + port)
-	if e != nil {
+	l, err := net.Listen("tcp", ":" + port)
+	if err != nil {
 		LOG.Error("listen error: " + err.Error())
 	}
-	LOG.Info("listening at 0.0.0.0:%s", port)
-	http.Serve(l, nil)
+
+	LOG.Info("listen at 0.0.0.0:%s", port)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			LOG.Error("Error: accept rpc connection", err.Error())
+			continue
+		}
+		// blocking
+		go rpc.ServeConn(conn)
+	}
 
 	return nil
 }
