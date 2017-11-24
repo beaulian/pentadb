@@ -59,14 +59,14 @@ type Node struct {
 
 	DB *leveldb.DB
 
-	mutex *sync.Mutex
+	mutex *sync.RWMutex   // read-write lock
 }
 
 func NewNode(ipaddr string) *Node {
 	return &Node {
 		Ipaddr: ipaddr,
 		State: Running,
-		mutex: new(sync.Mutex),
+		mutex: new(sync.RWMutex),
 	}
 }
 
