@@ -49,7 +49,7 @@ const (
 	// integer to control what color is printed
 	// each is on behalf of a kind of level, making
 	// the text that will be printed has different color
-	InfoColor uint32 = 32               // for info level, color is green
+	InfoColor uint32 = 37               // for info level, color is white
 	WarningColor uint32 = 33            // for warning level, color is yellow
 	ErrorColor uint32 = 31              // for error level, color is red
 )
