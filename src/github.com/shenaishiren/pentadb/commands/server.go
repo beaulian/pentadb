@@ -34,16 +34,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
 import (
-	"log"
+	"os"
 	"net"
+	"fmt"
 	"flag"
-	"net/http"
-	"net/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/shenaishiren/pentadb/rpc"
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/server"
-	"fmt"
+	"github.com/shenaishiren/pentadb/log"
 )
+
+var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
 
@@ -62,23 +64,30 @@ type Server struct {
 func (s *Server) listen(port string, path string) error {
 	s.Node = server.NewNode("127.0.0.1:" + port)
 	db, err := leveldb.OpenFile(path, nil)
-	defer db.Close()
 
 	if err != nil {
+		LOG.Error("open levelDB error: " + err.Error())
 		return err
 	}
 	s.Node.DB = db
 	rpc.Register(s.Node)
-	rpc.HandleHTTP()      // bind prc to http service
 
-	l, e := net.Listen("tcp", ":" + port)
-	if e != nil {
-		log.Fatal("listen error:", e)
+	l, err := net.Listen("tcp", ":" + port)
+	if err != nil {
+		LOG.Error("listen error: " + err.Error())
 	}
-	log.Printf("%c[1;40;32m%s%c[0m",
-		0x1B, "listening at http://0.0.0.0:" + port,
-		0x1B)
-	http.Serve(l, nil)
+
+	LOG.Info("listen at 0.0.0.0:%s", port)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			LOG.Error("Error: accept rpc connection", err.Error())
+			continue
+		}
+		// blocking
+		go rpc.ServeConn(conn)
+	}
+
 	return nil
 }
 
@@ -100,7 +109,7 @@ func main() {
 	if help {
 		fmt.Print(helpPrompt)
 	} else {
-		server := new(Server)
-		server.listen(port, path)
+		svr := new(Server)
+		svr.listen(port, path)
 	}
 }
