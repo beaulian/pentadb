@@ -43,9 +43,6 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-var timeout = 2 * time.Second
-
-
 type Node struct {
 	// The name of node, maybe used for some commands
 	// like `pentadb nodes list`
@@ -67,9 +64,7 @@ func NewNode(ipaddr string) *Node {
 		Ipaddr:   ipaddr,
 		Ctime:    time.Now(),
 	}
-	if !Reachable(ipaddr, timeout) {
-		return nil
-	}
+	// check whether this node is connectable or not
 	proxy := NewNodeProxy(node)
 	if proxy == nil {
 		return nil

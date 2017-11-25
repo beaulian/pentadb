@@ -36,7 +36,6 @@ package client
 
 import (
 	"fmt"
-	"time"
 	"errors"
 	"net/rpc"
 
@@ -57,7 +56,7 @@ type NodeProxy struct {
 }
 
 func NewNodeProxy(node *Node) *NodeProxy {
-	client, err := nrpc.DialTimeout(opt.DefaultProtocol, node.Ipaddr, time.Second * 30)
+	client, err := nrpc.DialTimeout(opt.DefaultProtocol, node.Ipaddr, opt.DefaultTimeout)
 	if err != nil {
 		return nil
 	}

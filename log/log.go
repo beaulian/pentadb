@@ -185,7 +185,6 @@ func (l *Log) Info(format string, v ...interface{}) {
 func (l *Log) Warning(format string, v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, (l.color & 0x00ff0000) >> 16, l.wrapper(fmt.Sprintf(format, v...)))
 	fmt.Println(text)
-	panic(text)
 }
 
 func (l *Log) Error(format string, v ...interface{}) {

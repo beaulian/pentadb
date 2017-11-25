@@ -1,9 +1,6 @@
 package client
 
 import (
-	"log"
-	"net"
-	"time"
 	"crypto/md5"
 )
 
@@ -21,15 +18,6 @@ func KemataHash(key string, i int) uint32 {
 		uint32(digest[i << 2] & 0xff)
 
 	return hash
-}
-
-func Reachable(ipaddr string, timeout time.Duration) bool {
-	_, err := net.DialTimeout("tcp", ipaddr, timeout)
-	if err != nil {
-		log.Fatalf("node: %s is unreachable due to error: %s", ipaddr, err)
-		return false
-	}
-	return true
 }
 
 

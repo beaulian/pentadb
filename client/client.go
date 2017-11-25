@@ -34,10 +34,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package client
 
 import (
+	"os"
 	"fmt"
 	"errors"
 	"github.com/shenaishiren/pentadb/opt"
+	"github.com/shenaishiren/pentadb/log"
 )
+
+var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
 
 const MAXN = 1024
 
@@ -62,10 +66,12 @@ func NewClient(nodeIpaddrs []string, weights map[string]int, replicas int) (*Cli
 	}
 	// initialize hash ring
 	hashRing := NewHashRing()
+	// check whether the ip address is connectable or not in `init` function
 	nodes, _ := hashRing.init(nodeIpaddrs, weights)
 	nodeDict := make(map[string]*Node)
 	for _, node := range nodes {
 		nodeDict[node.Name] = node
+		// asynchronously
 		go node.Proxy.init(nodeIpaddrs, &opt.NodeProxyOptions{Replicas: replicas})
 	}
 	// initialize client
@@ -89,13 +95,21 @@ func NewClient(nodeIpaddrs []string, weights map[string]int, replicas int) (*Cli
 
 func (c *Client) addNode(nodeIpaddr string, weight int) {
 	node := c.hashRing.addNode(nodeIpaddr, weight)
+	if node == nil {
+		return
+	}
 	c.nodes[nodeIpaddr] = node
-	node.Proxy.addNode(nodeIpaddr)
+	if err := node.Proxy.addNode(nodeIpaddr); err != nil {
+		LOG.Warning("node: %s is unconnectable, due to error: %s", node.Ipaddr, err.Error())
+		c.unreachableChan <- node.Name
+	}
 }
 
 func (c *Client) removeNode(nodeName string) {
 	node := c.nodes[nodeName]
-	node.Proxy.removeNode(node.Ipaddr)
+	if err := node.Proxy.removeNode(node.Ipaddr); err != nil {
+		LOG.Warning("node: %s is unconnectable, due to error: %s", node.Ipaddr, err.Error())
+	}
 	delete(c.nodes, nodeName)
 }
 
@@ -107,17 +121,33 @@ func (c *Client) put(key []byte, value []byte) error {
 	// choose a node
 	hashKey := KemataHash(string(key), 0)
 	node, _ := c.hashRing.findProperNode(hashKey)
-	return node.rNode.Proxy.put(key, value)
+	if err := node.rNode.Proxy.put(key, value); err != nil {
+		LOG.Warning("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
+		c.unreachableChan <- node.rNode.Name
+		return err
+	}
+	return nil
 }
 
 func (c *Client) get(key []byte) ([]byte, error) {
 	hashKey := KemataHash(string(key), 0)
 	node, _ := c.hashRing.findProperNode(hashKey)
-	return node.rNode.Proxy.get(key)
+	value, err := node.rNode.Proxy.get(key)
+	if err != nil {
+		LOG.Warning("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
+		c.unreachableChan <- node.rNode.Name
+		return nil, err
+	}
+	return value, nil
 }
 
 func (c *Client) delete(key []byte) error {
 	hashKey := KemataHash(string(key), 0)
 	node, _ := c.hashRing.findProperNode(hashKey)
-	return node.rNode.Proxy.delete(key)
+	if err := node.rNode.Proxy.delete(key); err != nil {
+		LOG.Warning("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
+		c.unreachableChan <- node.rNode.Name
+		return err
+	}
+	return nil
 }
