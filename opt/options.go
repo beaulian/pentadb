@@ -3,8 +3,8 @@ package opt
 import "time"
 
 const (
-	DefaultReplicas = 3                 // default replicas for raft algorithm
-	DeafultPath = "/tmp/pentadb"  // default path for levelDB
+	DefaultReplicas = 0                 // default replicas for raft algorithm
+	DeafultPath = "/tmp/pentadb"        // default path for levelDB
 	DefaultProtocol = "tcp"
 	DefaultTimeout = 3 * time.Second
 )

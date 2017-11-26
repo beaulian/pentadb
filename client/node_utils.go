@@ -4,10 +4,13 @@ import (
 	"crypto/md5"
 )
 
-func KemataHash(key string, i int) uint32 {
+func Md5Hash(key []byte) []byte {
 	md := md5.New()
-	md.Write([]byte(key))
-	digest := md.Sum(nil)
+	md.Write(key)
+	return md.Sum(nil)
+}
+
+func KemataHash(digest []byte, i int) uint32 {
 	// calculate the hash value
 	// each four bytes constitute a 32-bit integer
 	// then add the four 32-bit integers to the final hash value

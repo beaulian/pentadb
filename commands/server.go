@@ -34,7 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package main
 
 import (
-	"os"
 	"net"
 	"fmt"
 	"flag"
@@ -45,7 +44,7 @@ import (
 	"github.com/shenaishiren/pentadb/log"
 )
 
-var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
+var LOG = log.DefaultLog
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
 
@@ -66,7 +65,7 @@ func (s *Server) listen(port string, path string) error {
 	db, err := leveldb.OpenFile(path, nil)
 
 	if err != nil {
-		LOG.Error("open levelDB error: " + err.Error())
+		LOG.Error("open levelDB error: ", err.Error())
 		return err
 	}
 	s.Node.DB = db
@@ -74,10 +73,10 @@ func (s *Server) listen(port string, path string) error {
 
 	l, err := net.Listen("tcp", ":" + port)
 	if err != nil {
-		LOG.Error("listen error: " + err.Error())
+		LOG.Error("listen error: ", err.Error())
 	}
 
-	LOG.Info("listen at 0.0.0.0:%s", port)
+	LOG.Infof("listen at 0.0.0.0:%s", port)
 	for {
 		conn, err := l.Accept()
 		if err != nil {

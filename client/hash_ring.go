@@ -35,8 +35,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package client
 
 import (
-	"math"
 	"math/rand"
+	"math"
+	"errors"
+	"bytes"
 )
 
 const (
@@ -80,16 +82,16 @@ func NewHashRing() *HashRing {
 }
 
 // Get the count of virtual nodes
-func (hr *HashRing) getVNodeCount(weight int, averageWeight float64) int {
-	return int(math.Floor(float64(defaultFactor * weight) / averageWeight))
+func (hr *HashRing) getVNodeCount(weight int) int {
+	return int(math.Floor(float64(defaultFactor * weight) / hr.averageWeight))
 }
 
 // create a hash ring
 func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error) {
 	nodesCount := len(nodes)
 	// check weights and initialize it
-	if weights == nil {
-		weights := make(map[string]int)
+	if len(weights) == 0 {
+		weights = make(map[string]int)
 		for _, node := range nodes {
 			weights[node] = defaultWeight
 		}
@@ -99,9 +101,10 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error
 	for _, weight := range weights {
 		totalWeight += weight
 	}
-	hr.averageWeight = float64(totalWeight / nodesCount)
+	hr.averageWeight = float64(totalWeight) / float64(nodesCount)
 	// generate ring
 	rNodes := make([]*Node, nodesCount)
+	i := 0
 	for _, node := range nodes {
 		weight := weights[node]
 		rNode := hr.addNode(node, weight)
@@ -109,7 +112,8 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error
 		if rNode == nil {
 			continue
 		}
-		rNodes = append(rNodes, rNode)
+		rNodes[i] = rNode
+		i++
 	}
 	return rNodes, nil
 }
@@ -158,8 +162,19 @@ func (hr *HashRing) insertNode(rNode *Node, hash uint32) error {
 		update[i].Forward[i] = newNode
 	}
 	hr.length++
-
 	return nil
+}
+
+func (hr *HashRing) genKey(v ...string) []byte {
+	b := bytes.Buffer{}
+	var i int
+	var length = len(v)
+	for i = 0; i < length - 1; i++ {
+		b.WriteString(v[i])
+		b.WriteString("#")
+	}
+	b.WriteString(v[i])
+	return b.Bytes()
 }
 
 func (hr *HashRing) addNode(nodeIpaddr string, weight int) *Node {
@@ -167,22 +182,23 @@ func (hr *HashRing) addNode(nodeIpaddr string, weight int) *Node {
 	if rNode == nil {
 		return nil
 	}
-	vNodeCount := hr.getVNodeCount(weight, hr.averageWeight)
+	vNodeCount := hr.getVNodeCount(weight)
 	// four virtual nodes per group
 	for i := 0; i < vNodeCount / 4; i++ {
+		hashKey := Md5Hash(hr.genKey(nodeIpaddr, string(i)))
 		for j := 0; j < 4; j++ {
-			key := KemataHash(nodeIpaddr, j)
+			key := KemataHash(hashKey, j)
 			hr.insertNode(rNode, key)
 		}
 	}
 	return rNode
 }
 
-func (hr *HashRing) removeNode(hash uint32) error {
+func (hr *HashRing) removeNode(hash uint32) {
 	node := hr.header
 	update := make(map[int]*VNode)
 	for i := hr.level - 1; i >= 0; i-- {
-		for node.Forward[i].Hash < hash {
+		for node.Forward[i] != nil && node.Forward[i].Hash < hash {
 			node = node.Forward[i]
 		}
 		update[i] = node
@@ -196,39 +212,50 @@ func (hr *HashRing) removeNode(hash uint32) error {
 		hr.level--
 	}
 	hr.length--
-
-	return nil
 }
 
-func (hr *HashRing) deleteNode(node *VNode) error {
+// delete virtual node
+func (hr *HashRing) deleteNode(node *VNode) {
 	hr.removeNode(node.Hash)
-
-	return  nil
 }
 
-func (hr *HashRing) deleteNodeByIpaddr(nodeIpaddr string, vNodeCount int) error {
+func (hr *HashRing) deleteNodeByIpaddr(nodeIpaddr string, vNodeCount int) {
 	for i := 0; i < vNodeCount / 4; i++ {
+		hashKey := Md5Hash(hr.genKey(nodeIpaddr, string(i)))
 		for j := 0; j < 4; j++ {
-			key := KemataHash(nodeIpaddr, j)
+			key := KemataHash(hashKey, j)
 			hr.removeNode(key)
 		}
 	}
-
-	return nil
 }
 
 // find a proper server for data
 func (hr *HashRing) findProperNode(hashKey uint32) (*VNode, error) {
-	// the hashKey is hash value of data, instead of server
+	// the hashKey is hash value of data, instead of node's
+	if hr.header.Forward[0] == nil {
+		return nil, errors.New("no node in this hash ring")
+	}
 	node := hr.header
 	for i := hr.level - 1; i >= 0; i-- {
-		for node.Forward[i].Hash < hashKey {
+		for node.Forward[i] != nil && node.Forward[i].Hash < hashKey {
 			node = node.Forward[i]
 		}
 	}
-	// arrive the end
+	// arrive the end, turn to head
 	if node.Forward[0] == nil {
 		node = hr.header.Forward[0]
 	}
 	return node, nil
 }
+
+// for debug
+// iterate this ring
+func (hr *HashRing) Iter(f func(*VNode)) {
+	root := hr.header.Forward[0]
+	for p := root; p != nil; p = p.Forward[0] {
+		f(p)
+	}
+}
+
+// return the first virtual node in this ring
+func (hr *HashRing) First() *VNode { return hr.header.Forward[0] }

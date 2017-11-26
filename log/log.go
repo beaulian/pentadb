@@ -51,6 +51,7 @@ const (
 	// the text that will be printed has different color
 	InfoColor uint32 = 37               // for info level, color is white
 	WarningColor uint32 = 33            // for warning level, color is yellow
+	DebugColor uint32 = 32              // for debug level, color is green
 	ErrorColor uint32 = 31              // for error level, color is red
 )
 
@@ -76,14 +77,14 @@ type Log struct {
 	// color use a special way to store three kinds of color
 	// for a 32-bit integer, color use the first 8-bit as info color
 	// the subsequent 8-bit as warning color, and then the subsequent 8-bit
-	// as error color
+	// as debug color, the last 8-bit as error color
 	color uint32           // define three colors for info, warning and error level
 	colorTemplate string   // define how to print colored text
 }
 
 
 func NewLog(out io.Writer, flag int) *Log {
-	color := InfoColor <<  24 + WarningColor << 16 + ErrorColor << 8
+	color := InfoColor <<  24 + WarningColor << 16 + DebugColor << 8 + ErrorColor
 	return &Log {
 		out:            out,
 		flag:           flag,
@@ -123,11 +124,18 @@ func (l *Log) SetWarningColor(color uint32) {
 	l.color = l.color & 0xff00ffff & (color << 16)
 }
 
-func (l *Log) SetErrorColor(color uint32) {
+func (l *Log) SetDebugColor(color uint32) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	l.color = l.color & 0xffff00ff & (color << 8)
+}
+
+func (l *Log) SetErrorColor(color uint32) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.color = l.color & 0xffffff00 & color
 }
 
 func (l *Log) wrapper(text string) string {
@@ -177,18 +185,47 @@ func (l *Log) wrapper(text string) string {
 	return buf.String()
 }
 
-func (l *Log) Info(format string, v ...interface{}) {
+func (l *Log) Infof(format string, v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, l.color >> 24, l.wrapper(fmt.Sprintf(format, v...)))
 	fmt.Println(text)
 }
 
-func (l *Log) Warning(format string, v ...interface{}) {
+func (l *Log) Info(v ...interface{}) {
+	text := fmt.Sprintf(l.colorTemplate, l.color >> 24, l.wrapper(fmt.Sprint(v...)))
+	fmt.Println(text)
+}
+
+func (l *Log) Warningf(format string, v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, (l.color & 0x00ff0000) >> 16, l.wrapper(fmt.Sprintf(format, v...)))
 	fmt.Println(text)
 }
 
-func (l *Log) Error(format string, v ...interface{}) {
+func (l *Log) Warning(v ...interface{}) {
+	text := fmt.Sprintf(l.colorTemplate, (l.color & 0x00ff0000) >> 16, l.wrapper(fmt.Sprint(v...)))
+	fmt.Println(text)
+}
+
+func (l *Log) Debugf(format string, v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, (l.color & 0x0000ff00) >> 8, l.wrapper(fmt.Sprintf(format, v...)))
+	fmt.Println(text)
+}
+
+func (l *Log) Debug(v ...interface{}) {
+	text := fmt.Sprintf(l.colorTemplate, (l.color & 0x0000ff00) >> 8, l.wrapper(fmt.Sprint(v...)))
+	fmt.Println(text)
+}
+
+func (l *Log) Errorf(format string, v ...interface{}) {
+	text := fmt.Sprintf(l.colorTemplate, l.color & 0x000000ff, l.wrapper(fmt.Sprintf(format, v...)))
 	fmt.Println(text)
 	os.Exit(1)
 }
+
+func (l *Log) Error(v ...interface{}) {
+	text := fmt.Sprintf(l.colorTemplate, l.color & 0x000000ff, l.wrapper(fmt.Sprint(v...)))
+	fmt.Println(text)
+	os.Exit(1)
+}
+
+// default log
+var DefaultLog = NewLog(os.Stdout, Ldate | Ltime | Lshortfile)
