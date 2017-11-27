@@ -90,7 +90,6 @@ func (s *Server) listen(port string, path string) error {
 	return nil
 }
 
-
 func main() {
 	var (
 		help bool
@@ -100,6 +99,11 @@ func main() {
 	flag.BoolVar(&help, "h", false, "Display this help message and exit")
 	flag.StringVar(&port, "p", "4567", "The port to listen on (default: 4567)")
 	flag.StringVar(&path, "a", opt.DeafultPath, "The path to use for the LevelDB store")
+
+	// change default usage
+	flag.Usage = func() {
+		fmt.Println(helpPrompt)
+	}
 
 	// run
 	flag.Parse()

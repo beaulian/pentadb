@@ -66,10 +66,10 @@ func NewNode(ipaddr string) *Node {
 	}
 	// check whether this node is connectable or not
 	// TODO
-	//proxy := NewNodeProxy(node)
-	//if proxy == nil {
-	//	return nil
-	//}
-	//node.Proxy = proxy
+	proxy := NewNodeProxy(node)
+	if proxy == nil {
+		return nil
+	}
+	node.Proxy = proxy
 	return node
 }
