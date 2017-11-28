@@ -61,7 +61,7 @@ type Server struct {
 }
 
 func (s *Server) listen(port string, path string) {
-	s.Node = server.NewNode("127.0.0.1:" + port)
+	s.Node = server.NewNode(":" + port)
 	db, err := leveldb.OpenFile(path, nil)
 
 	if err != nil {

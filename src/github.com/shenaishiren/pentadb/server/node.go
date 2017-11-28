@@ -35,10 +35,12 @@ package server
 
 import (
 	"sync"
+	"errors"
 	"math/rand"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/shenaishiren/pentadb/args"
 	"github.com/shenaishiren/pentadb/log"
+	"fmt"
 )
 
 var LOG = log.DefaultLog
@@ -72,7 +74,7 @@ func NewNode(ipaddr string) *Node {
 	}
 }
 
-func (n *Node) randomChoice(list []string, k int) ([]string, error) {
+func (n *Node) randomChoice(list []string, k int) []string {
 	pool := list
 	p := len(pool)
 	result := make([]string, k)
@@ -81,27 +83,18 @@ func (n *Node) randomChoice(list []string, k int) ([]string, error) {
 		result[i] = pool[j]
 		pool[j] = result[p - i - 1]
 	}
-
-	return result, nil
+	return result
 }
-
 
 func (n *Node) Init(args *args.InitArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	nodes := args.Nodes
-	otherNodes := make([]string, len(nodes) - 1)
-	for _, node := range nodes {
-		if node != n.Ipaddr {
-			otherNodes = append(otherNodes, node)
-		}
-	}
-
-	n.OtherNodes = otherNodes
-	replicaNodes, err := n.randomChoice(otherNodes, args.Replicas)
-	if err != nil {
-		return err
+	n.Ipaddr = args.Self
+	n.OtherNodes = args.OtherNodes
+	replicaNodes := n.randomChoice(args.OtherNodes, args.Replicas)
+	if len(replicaNodes) == 0 {
+		return errors.New(fmt.Sprintf("node %s init failed", n.Ipaddr))
 	}
 	replicaNodes = append(replicaNodes, n.Ipaddr)
 	n.ReplicaNodes = replicaNodes

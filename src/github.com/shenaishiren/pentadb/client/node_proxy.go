@@ -79,8 +79,16 @@ func (np *NodeProxy) call(serviceMethod string, args interface{}, unreachableCha
 }
 
 func (np *NodeProxy) Init(nodeIpaddrs []string, replicas int, unreachableChan chan string) {
+	var otherNodes []string
+	for _, node := range nodeIpaddrs {
+		if node != np.node.Ipaddr {
+			otherNodes = append(otherNodes, node)
+		}
+	}
 	args := &args.InitArgs{
-		Nodes: nodeIpaddrs, Replicas: replicas,
+		Self: np.node.Ipaddr,
+		OtherNodes: otherNodes,
+		Replicas: replicas,
 	}
 	np.call("Node.Init", args, unreachableChan)
 }

@@ -34,8 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package args
 
 type InitArgs struct {
-	// a array consisting of each node's ipaddr
-	Nodes []string
+	Self string
+	// a array consisting of other nodes' ipaddr
+	OtherNodes []string
 
 	// replicas
 	Replicas int
