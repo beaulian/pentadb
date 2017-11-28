@@ -59,7 +59,7 @@ type Node struct {
 }
 
 func NewNode(ipaddr string) *Node {
-	node := &Node {
+	node := &Node{
 		Name:     uuid.NewV1().String(),
 		Ipaddr:   ipaddr,
 		Ctime:    time.Now(),

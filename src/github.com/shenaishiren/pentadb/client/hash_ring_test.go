@@ -40,7 +40,7 @@ func TestNewHashRing(t *testing.T) {
 	// test delete node
 	node = hashRing.First()
 	hashRing.deleteNode(node)
-	if vnode, _ := hashRing.findProperNode(node.Hash); vnode != nil {
-		t.Error("delete function is wrong")
+	if hashRing.First() == node {
+		t.Error("wrong delete function!")
 	}
 }

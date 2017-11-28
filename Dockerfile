@@ -8,8 +8,8 @@ ADD . /pentadb
 
 ENV GOPATH=/pentadb
 
-RUN apt update && apt install golang -y
+RUN apt update && apt install golang git -y
 
 RUN chmod +x /pentadb/entry.sh
 
-CMD . /pentadb/entry.sh
+CMD bash /pentadb/entry.sh

@@ -218,13 +218,11 @@ func (l *Log) Debug(v ...interface{}) {
 func (l *Log) Errorf(format string, v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, l.color & 0x000000ff, l.wrapper(fmt.Sprintf(format, v...)))
 	fmt.Println(text)
-	os.Exit(1)
 }
 
 func (l *Log) Error(v ...interface{}) {
 	text := fmt.Sprintf(l.colorTemplate, l.color & 0x000000ff, l.wrapper(fmt.Sprint(v...)))
 	fmt.Println(text)
-	os.Exit(1)
 }
 
 // default log

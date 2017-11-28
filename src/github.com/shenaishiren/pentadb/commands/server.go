@@ -60,13 +60,13 @@ type Server struct {
 	Node *server.Node
 }
 
-func (s *Server) listen(port string, path string) error {
+func (s *Server) listen(port string, path string) {
 	s.Node = server.NewNode("127.0.0.1:" + port)
 	db, err := leveldb.OpenFile(path, nil)
 
 	if err != nil {
 		LOG.Error("open levelDB error: ", err.Error())
-		return err
+		return
 	}
 	s.Node.DB = db
 	rpc.Register(s.Node)
@@ -74,20 +74,19 @@ func (s *Server) listen(port string, path string) error {
 	l, err := net.Listen("tcp", ":" + port)
 	if err != nil {
 		LOG.Error("listen error: ", err.Error())
+		return
 	}
 
 	LOG.Infof("listen at 0.0.0.0:%s", port)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			LOG.Error("Error: accept rpc connection", err.Error())
+			LOG.Error("accept rpc connection", err.Error())
 			continue
 		}
 		// blocking
 		go rpc.ServeConn(conn)
 	}
-
-	return nil
 }
 
 func main() {

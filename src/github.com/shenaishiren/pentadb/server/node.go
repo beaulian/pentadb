@@ -35,11 +35,13 @@ package server
 
 import (
 	"sync"
-	"errors"
 	"math/rand"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/shenaishiren/pentadb/args"
+	"github.com/shenaishiren/pentadb/log"
 )
+
+var LOG = log.DefaultLog
 
 type NodeStatus int
 
@@ -71,9 +73,6 @@ func NewNode(ipaddr string) *Node {
 }
 
 func (n *Node) randomChoice(list []string, k int) ([]string, error) {
-	if k <= 0 {
-		return nil, errors.New("invalid k: k must be > 0")
-	}
 	pool := list
 	p := len(pool)
 	result := make([]string, k)
@@ -117,7 +116,7 @@ func (n *Node) AddNode(node string, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) RemoveNode(node string, result *error) error {
+func (n *Node) RemoveNode(node string, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -150,7 +149,7 @@ func (n *Node) Get(key []byte, result *[]byte) error {
 	defer n.mutex.Unlock()
 
 	res, err := n.DB.Get(key, nil)
-	result = &res
+	*result = res
 	return err
 }
 

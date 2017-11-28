@@ -75,23 +75,23 @@ func NewClient(nodeIpaddrs []string, weights map[string]int, replicas int) (*Cli
 	// check whether the ip address is connectable or not in `init` function
 	nodes, _ := hashRing.init(nodeIpaddrs, weights)
 	nodeDict := make(map[string]*Node)
-	for _, node := range nodes {
-		nodeDict[node.Name] = node
-		// asynchronously
-		go node.Proxy.init(nodeIpaddrs, &opt.NodeProxyOptions{Replicas: replicas})
-	}
 	// initialize client
 	client := &Client{
 		nodes: nodeDict,
 		hashRing: hashRing,
 		unreachableChan: make(chan string, MAXN),
 	}
+	for _, node := range nodes {
+		nodeDict[node.Name] = node
+		// asynchronously
+		go node.Proxy.Init(nodeIpaddrs, replicas, client.unreachableChan)
+	}
 	// event loop about checking nodes
 	go func() {
 		for {
 			select {
 				case nodeName := <- client.unreachableChan:
-					client.removeNode(nodeName)
+					client.RemoveNode(nodeName)
 			}
 		}
 	}()
@@ -99,65 +99,54 @@ func NewClient(nodeIpaddrs []string, weights map[string]int, replicas int) (*Cli
 	return client, nil
 }
 
-func (c *Client) addNode(nodeIpaddr string, weight int) {
+func (c *Client) AddNode(nodeIpaddr string, weight int) {
 	node := c.hashRing.addNode(nodeIpaddr, weight)
 	if node == nil {
 		return
 	}
 	c.nodes[nodeIpaddr] = node
-	if err := node.Proxy.addNode(nodeIpaddr); err != nil {
-		LOG.Warningf("node: %s is unconnectable, due to error: %s", node.Ipaddr, err.Error())
-		c.unreachableChan <- node.Name
-	}
+	node.Proxy.AddNode(nodeIpaddr, c.unreachableChan)
 }
 
-func (c *Client) removeNode(nodeName string) {
+func (c *Client) RemoveNode(nodeName string) {
 	node := c.nodes[nodeName]
-	if err := node.Proxy.removeNode(node.Ipaddr); err != nil {
-		LOG.Warningf("node: %s is unconnectable, due to error: %s", node.Ipaddr, err.Error())
+	if node != nil {
+		node.Proxy.RemoveNode(node.Ipaddr, c.unreachableChan)
+		delete(c.nodes, nodeName)
 	}
-	delete(c.nodes, nodeName)
 }
 
-func (c *Client) getNode(nodeName string) *Node {
-	return c.nodes[nodeName]
-}
-
-func (c *Client) put(key []byte, value []byte) error {
+func (c *Client) Put(key []byte, value []byte) {
 	// choose a node
 	hashKey := KemataHash(Md5Hash(key), 0)
 	node, err := c.hashRing.findProperNode(hashKey)
 	if err != nil {
 		LOG.Error("error occurred when find proper node: ", err.Error())
-		return err
+		return
 	}
-	if err := node.rNode.Proxy.put(key, value); err != nil {
-		LOG.Warningf("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
-		c.unreachableChan <- node.rNode.Name
-		return err
-	}
-	return nil
+	node.rNode.Proxy.Put(key, value, c.unreachableChan)
 }
 
-func (c *Client) get(key []byte) ([]byte, error) {
+func (c *Client) Get(key []byte) []byte {
 	hashKey := KemataHash(Md5Hash(key), 0)
-	node, _ := c.hashRing.findProperNode(hashKey)
-	value, err := node.rNode.Proxy.get(key)
+	node, err := c.hashRing.findProperNode(hashKey)
 	if err != nil {
-		LOG.Warningf("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
-		c.unreachableChan <- node.rNode.Name
-		return nil, err
+		LOG.Error("error occurred when find proper node: ", err.Error())
+		return nil
 	}
-	return value, nil
+	return node.rNode.Proxy.Get(key, c.unreachableChan)
 }
 
-func (c *Client) delete(key []byte) error {
+func (c *Client) Delete(key []byte) {
 	hashKey := KemataHash(Md5Hash(key), 0)
-	node, _ := c.hashRing.findProperNode(hashKey)
-	if err := node.rNode.Proxy.delete(key); err != nil {
-		LOG.Warningf("node: %s is unconnectable, due to error: %s", node.rNode.Ipaddr, err.Error())
-		c.unreachableChan <- node.rNode.Name
-		return err
+	node, err := c.hashRing.findProperNode(hashKey)
+	if err != nil {
+		LOG.Error("error occurred when find proper node: ", err.Error())
+		return
 	}
-	return nil
+	node.rNode.Proxy.Delete(key, c.unreachableChan)
+}
+
+func (c *Client) Close() {
+	close(c.unreachableChan)
 }

@@ -103,8 +103,7 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error
 	}
 	hr.averageWeight = float64(totalWeight) / float64(nodesCount)
 	// generate ring
-	rNodes := make([]*Node, nodesCount)
-	i := 0
+	var rNodes []*Node
 	for _, node := range nodes {
 		weight := weights[node]
 		rNode := hr.addNode(node, weight)
@@ -112,8 +111,7 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error
 		if rNode == nil {
 			continue
 		}
-		rNodes[i] = rNode
-		i++
+		rNodes = append(rNodes, rNode)
 	}
 	return rNodes, nil
 }

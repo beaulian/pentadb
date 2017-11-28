@@ -50,8 +50,8 @@ func TimeoutCoder(f func(interface{}) error, v interface{}, msg string) error {
 		eChan <- f(v)
 	}()
 	select {
-	case e := <-eChan:
-		return e
+	case v := <-eChan:
+		return v
 	case <-time.After(30 * time.Second):
 		return errors.New("timeout occurred when: " + msg)
 	}
@@ -94,13 +94,12 @@ func DialTimeout(network, address string, timeout time.Duration) (*rpc.Client, e
 	}
 	encBuf := bufio.NewWriter(conn)
 	codec := &gobClientCodec{
-		conn, gob.NewDecoder(conn),
-		gob.NewEncoder(encBuf), encBuf,
+		rwc:    conn,
+		dec:    gob.NewDecoder(conn),
+		enc:    gob.NewEncoder(encBuf),
+		encBuf: encBuf,
 	}
 	c := rpc.NewClientWithCodec(codec)
 
 	return c, nil
 }
-
-
-

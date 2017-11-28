@@ -36,15 +36,15 @@ package rpc
 
 import (
 	"io"
-	"os"
 	"encoding/gob"
 	"bufio"
 	"net/rpc"
 
 	"github.com/shenaishiren/pentadb/log"
+	"net"
 )
 
-var LOG = log.NewLog(os.Stdout, log.Ldate | log.Ltime | log.Lshortfile)
+var LOG = log.DefaultLog
 
 type gobServerCodec struct {
 	rwc    io.ReadWriteCloser
@@ -97,7 +97,7 @@ func Register(rcvr interface{}) error { return rpc.Register(rcvr) }
 // The caller typically invokes ServeConn in a go statement.
 // ServeConn uses the gob wire format (see package gob) on the
 // connection. To use an alternate codec, use ServeCodec.
-func ServeConn(conn io.ReadWriteCloser) {
+func ServeConn(conn net.Conn) {
 	buf := bufio.NewWriter(conn)
 	codec := &gobServerCodec{
 		rwc:    conn,
@@ -106,7 +106,7 @@ func ServeConn(conn io.ReadWriteCloser) {
 		encBuf: buf,
 	}
 	if err := rpc.ServeRequest(codec); err != nil {
-		LOG.Error("Error: server rpc request", err.Error())
+		LOG.Error("server rpc request: ", err.Error())
 	}
 	codec.Close()
 }

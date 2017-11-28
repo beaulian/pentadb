@@ -2,6 +2,8 @@ package client
 
 import (
 	"crypto/md5"
+	"time"
+	"net"
 )
 
 func Md5Hash(key []byte) []byte {
@@ -23,4 +25,12 @@ func KemataHash(digest []byte, i int) uint32 {
 	return hash
 }
 
-
+func Reachable(ipaddr string, timeout time.Duration) bool {
+	conn, err := net.DialTimeout("tcp", ipaddr, timeout)
+	if err != nil {
+		LOG.Errorf("node %s is unreachable: %s", ipaddr, err)
+		return false
+	}
+	defer conn.Close()
+	return true
+}

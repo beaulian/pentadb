@@ -35,10 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package client
 
 import (
-	"fmt"
-	"errors"
-	"net/rpc"
-
+	"sync"
 	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/args"
 	nrpc "github.com/shenaishiren/pentadb/rpc"
@@ -48,62 +45,63 @@ type NodeProxy struct {
 	// client-side node
 	node *Node
 
-	// rpc client
-	rpcClient *rpc.Client
-
-	// node's state
-	nodeState opt.NodeState
+	mu *sync.Mutex
 }
 
 func NewNodeProxy(node *Node) *NodeProxy {
-	client, err := nrpc.DialTimeout(opt.DefaultProtocol, node.Ipaddr, opt.DefaultTimeout)
-	if err != nil {
+	if !Reachable(node.Ipaddr, opt.DefaultTimeout) {
 		return nil
 	}
 	return &NodeProxy{
 		node:          node,
-		nodeState:     opt.NodeRunning,
-		rpcClient:     client,
+		mu:            new(sync.Mutex),
 	}
 }
 
-func (np *NodeProxy) init(nodeIpaddrs []string, option *opt.NodeProxyOptions) error {
-	nodesCount := len(nodeIpaddrs)
-	replicas := option.Replicas
-	if option == nil || option.Replicas == 0 {
-		replicas = opt.DefaultReplicas
-	} else if replicas < opt.DefaultReplicas || replicas >= nodesCount {
-		return errors.New(
-			fmt.Sprintf("replica number must be >= %d and < %d",
-				opt.DefaultReplicas, nodesCount),
-		)
+func (np *NodeProxy) call(serviceMethod string, args interface{}, unreachableChan chan string) []byte {
+	client, err := nrpc.DialTimeout(opt.DefaultProtocol, np.node.Ipaddr, opt.DefaultTimeout)
+	if err != nil {
+		LOG.Errorf("node %s is unreachable: %s", np.node.Ipaddr, err.Error())
+		unreachableChan <- np.node.Name
+		return nil
 	}
+	// call
+	var result []byte
+	err = client.Call(serviceMethod, args, &result)
+	if err != nil {
+		LOG.Error("rpc call failed: ", err.Error())
+		return nil
+	}
+	if err = client.Close(); err != nil {
+		LOG.Error("client close failed: ", err.Error())
+	}
+	return result
+}
+
+func (np *NodeProxy) Init(nodeIpaddrs []string, replicas int, unreachableChan chan string) {
 	args := &args.InitArgs{
 		Nodes: nodeIpaddrs, Replicas: replicas,
 	}
-
-	return np.rpcClient.Call("Node.Init", args, nil)
+	np.call("Node.Init", args, unreachableChan)
 }
 
-func (np *NodeProxy) addNode(nodeIpaddr string) error {
-	return np.rpcClient.Call("Node.AddNode", nodeIpaddr, nil)
+func (np *NodeProxy) AddNode(nodeIpaddr string, unreachableChan chan string) {
+	np.call("Node.AddNode", nodeIpaddr, unreachableChan)
 }
 
-func (np *NodeProxy) removeNode(nodeIpaddr string) error {
-	return np.rpcClient.Call("Node.RemoveNode", nodeIpaddr, nil)
+func (np *NodeProxy) RemoveNode(nodeIpaddr string, unreachableChan chan string) {
+	np.call("Node.RemoveNode", nodeIpaddr, unreachableChan)
 }
 
-func (np *NodeProxy) put(key []byte, value []byte) error {
-	kvArgs := &args.KVArgs{key, value}
-	return np.rpcClient.Call("Node.Put", kvArgs, nil)
+func (np *NodeProxy) Put(key []byte, value []byte, unreachableChan chan string) {
+	kvArgs := &args.KVArgs{Key:key, Value: value}
+	np.call("Node.Put", kvArgs, unreachableChan)
 }
 
-func (np *NodeProxy) get(key []byte) ([]byte, error) {
-	var result []byte
-	err := np.rpcClient.Call("Node.Get", key, &result)
-	return result, err
+func (np *NodeProxy) Get(key []byte, unreachableChan chan string) []byte {
+	return np.call("Node.Get", key, unreachableChan)
 }
 
-func (np *NodeProxy) delete(key []byte) error {
-	return np.rpcClient.Call("Node.Delete", key, nil)
+func (np *NodeProxy) Delete(key []byte, unreachableChan chan string) {
+	np.call("Node.Delete", key, unreachableChan)
 }
