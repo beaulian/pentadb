@@ -39,6 +39,9 @@ import (
 	"math"
 	"errors"
 	"bytes"
+	"strings"
+
+	"github.com/willf/bloom"
 )
 
 const (
@@ -61,23 +64,25 @@ type HashRing struct {
 	level int                 // the level of skip-list
 	length int                // number of nodes
 	averageWeight float64     // total weight of nodes in hash ring
+	filter *bloom.BloomFilter // bloom filter, ensure every node is unique
 }
 
 func NewVNode(node *Node, hash uint32, level int) *VNode {
 	return &VNode {
 		Hash:    hash,
 		Forward: make([]*VNode, level),
-		rNode: node,
+		rNode:   node,
 	}
 }
 
 func NewHashRing() *HashRing {
 	return &HashRing{
-		rnd:          rand.New(rand.NewSource(0xdeadbeef)),
-		level:        1,
-		length:       0,
+		rnd:            rand.New(rand.NewSource(0xdeadbeef)),
+		level:          1,
+		length:         0,
 		averageWeight:  0,
-		header:       NewVNode(nil,0, maxLevel),
+		header:         NewVNode(nil,0, maxLevel),
+		filter:         bloom.New(uint(100), 5),
 	}
 }
 
@@ -176,10 +181,17 @@ func (hr *HashRing) genKey(v ...string) []byte {
 }
 
 func (hr *HashRing) addNode(nodeIpaddr string, weight int) *Node {
+	// check whether exist or not
+	nodeIp := strings.Split(nodeIpaddr, ":")[0]
+	if hr.filter.Test([]byte(nodeIp)) {
+		return nil
+	}
 	rNode := NewNode(nodeIpaddr)
 	if rNode == nil {
 		return nil
 	}
+	// add to bloom filter
+	hr.filter.Add([]byte(nodeIp))
 	vNodeCount := hr.getVNodeCount(weight)
 	// four virtual nodes per group
 	for i := 0; i < vNodeCount / 4; i++ {
@@ -214,6 +226,9 @@ func (hr *HashRing) removeNode(hash uint32) {
 
 // delete virtual node
 func (hr *HashRing) deleteNode(node *VNode) {
+	if node == nil {
+		return
+	}
 	hr.removeNode(node.Hash)
 }
 
