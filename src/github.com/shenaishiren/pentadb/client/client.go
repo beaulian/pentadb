@@ -111,7 +111,8 @@ func (c *Client) AddNode(nodeIpaddr string, weight int) {
 func (c *Client) RemoveNode(nodeName string) {
 	node := c.nodes[nodeName]
 	if node != nil {
-		node.Proxy.RemoveNode(node.Ipaddr, c.unreachableChan)
+		c.hashRing.deleteNode(node.Ipaddr, node.Weight)
+		go node.Proxy.RemoveNode(node.Ipaddr, c.unreachableChan)
 		delete(c.nodes, nodeName)
 	}
 }

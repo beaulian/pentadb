@@ -40,8 +40,7 @@ import (
 	"errors"
 	"bytes"
 	"strings"
-
-	"github.com/willf/bloom"
+	"github.com/seiflotfy/cuckoofilter"
 )
 
 const (
@@ -60,11 +59,11 @@ type VNode struct {
 type HashRing struct {
 	rnd *rand.Rand
 
-	header *VNode             // point to server skip-list
-	level int                 // the level of skip-list
-	length int                // number of nodes
-	averageWeight float64     // total weight of nodes in hash ring
-	filter *bloom.BloomFilter // bloom filter, ensure every node is unique
+	header *VNode                     // point to server skip-list
+	level int                         // the level of skip-list
+	length int                        // number of nodes
+	averageWeight float64             // total weight of nodes in hash ring
+	filter *cuckoofilter.CuckooFilter // cuckoo filter, ensure every node is unique
 }
 
 func NewVNode(node *Node, hash uint32, level int) *VNode {
@@ -82,7 +81,7 @@ func NewHashRing() *HashRing {
 		length:         0,
 		averageWeight:  0,
 		header:         NewVNode(nil,0, maxLevel),
-		filter:         bloom.New(uint(100), 5),
+		filter:         cuckoofilter.NewCuckooFilter(100),
 	}
 }
 
@@ -183,15 +182,15 @@ func (hr *HashRing) genKey(v ...string) []byte {
 func (hr *HashRing) addNode(nodeIpaddr string, weight int) *Node {
 	// check whether exist or not
 	nodeIp := strings.Split(nodeIpaddr, ":")[0]
-	if hr.filter.Test([]byte(nodeIp)) {
+	if hr.filter.Lookup([]byte(nodeIp)) {
 		return nil
 	}
-	rNode := NewNode(nodeIpaddr)
+	rNode := NewNode(nodeIpaddr, weight)
 	if rNode == nil {
 		return nil
 	}
 	// add to bloom filter
-	hr.filter.Add([]byte(nodeIp))
+	hr.filter.Insert([]byte(nodeIp))
 	vNodeCount := hr.getVNodeCount(weight)
 	// four virtual nodes per group
 	for i := 0; i < vNodeCount / 4; i++ {
@@ -225,14 +224,24 @@ func (hr *HashRing) removeNode(hash uint32) {
 }
 
 // delete virtual node
-func (hr *HashRing) deleteNode(node *VNode) {
+func (hr *HashRing) deleteVnode(node *VNode) {
 	if node == nil {
 		return
 	}
 	hr.removeNode(node.Hash)
 }
 
-func (hr *HashRing) deleteNodeByIpaddr(nodeIpaddr string, vNodeCount int) {
+func (hr *HashRing) deleteNode(nodeIpaddr string, weight int) {
+	// if not exist, return at once
+	nodeIp := strings.Split(nodeIpaddr, ":")[0]
+	if !hr.filter.Lookup([]byte(nodeIp)) {
+		return
+	}
+	// delete node from cuckoo filter
+	hr.filter.Delete([]byte(nodeIp))
+
+	// do delete
+	vNodeCount := hr.getVNodeCount(weight)
 	for i := 0; i < vNodeCount / 4; i++ {
 		hashKey := Md5Hash(hr.genKey(nodeIpaddr, string(i)))
 		for j := 0; j < 4; j++ {

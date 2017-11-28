@@ -48,6 +48,9 @@ type Node struct {
 	// like `pentadb nodes list`
 	Name string
 
+	// weight
+	Weight int
+
 	// The address of node, format as `<ip>:<port>`
 	Ipaddr string
 
@@ -58,11 +61,12 @@ type Node struct {
 	Proxy *NodeProxy
 }
 
-func NewNode(ipaddr string) *Node {
+func NewNode(ipaddr string, weight int) *Node {
 	node := &Node{
 		Name:     uuid.NewV1().String(),
 		Ipaddr:   ipaddr,
 		Ctime:    time.Now(),
+		Weight:   weight,
 	}
 	// check whether this node is connectable or not
 	// TODO
