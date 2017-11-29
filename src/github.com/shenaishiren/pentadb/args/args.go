@@ -35,6 +35,7 @@ package args
 
 type InitArgs struct {
 	Self string
+
 	// a array consisting of other nodes' ipaddr
 	OtherNodes []string
 
