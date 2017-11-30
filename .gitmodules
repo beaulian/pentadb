@@ -1,0 +1,15 @@
+[submodule "snappy"]
+    path = src/github.com/golang/snappy
+    url = https://github.com/golang/snappy
+[submodule "go.uuid"]
+    path = src/github.com/satori/go.uuid
+    url = https://github.com/satori/go.uuid
+[submodule "cuckoofilter"]
+    path = src/github.com/seiflotfy/cuckoofilter
+    url = https://github.com/seiflotfy/cuckoofilter
+[submodule "go-metro"]
+    path = src/github.com/dgryski/go-metro
+    url = https://github.com/dgryski/go-metro
+[submodule "goleveldb"]
+    path = src/github.com/syndtr/goleveldb
+    url = https://github.com/syndtr/goleveldb
