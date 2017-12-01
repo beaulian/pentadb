@@ -31,31 +31,23 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package server
+package main
 
 import (
 	"sync"
 	"errors"
 	"math/rand"
-	"github.com/syndtr/goleveldb/leveldb"
+	"fmt"
+
 	"github.com/shenaishiren/pentadb/args"
 	"github.com/shenaishiren/pentadb/log"
-	"fmt"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var LOG = log.DefaultLog
 
-type NodeStatus int
-
-const (
-	Running NodeStatus = iota
-	Terminal
-)
-
-type Node struct {
+type ServerNode struct {
 	Ipaddr string
-
-	State NodeStatus
 
 	OtherNodes []string
 
@@ -66,15 +58,14 @@ type Node struct {
 	mutex *sync.RWMutex   // read-write lock
 }
 
-func NewNode(ipaddr string) *Node {
-	return &Node {
+func NewServerNode(ipaddr string) *ServerNode {
+	return &ServerNode {
 		Ipaddr: ipaddr,
-		State: Running,
 		mutex: new(sync.RWMutex),
 	}
 }
 
-func (n *Node) randomChoice(list []string, k int) []string {
+func (n *ServerNode) randomChoice(list []string, k int) []string {
 	pool := list
 	p := len(pool)
 	result := make([]string, k)
@@ -86,7 +77,7 @@ func (n *Node) randomChoice(list []string, k int) []string {
 	return result
 }
 
-func (n *Node) Init(args *args.InitArgs, result *[]byte) error {
+func (n *ServerNode) Init(args *args.InitArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -101,7 +92,7 @@ func (n *Node) Init(args *args.InitArgs, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) AddNode(node string, result *[]byte) error {
+func (n *ServerNode) AddNode(node string, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -109,7 +100,7 @@ func (n *Node) AddNode(node string, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) RemoveNode(node string, result *[]byte) error {
+func (n *ServerNode) RemoveNode(node string, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -129,7 +120,7 @@ func (n *Node) RemoveNode(node string, result *[]byte) error {
 	return nil
 }
 
-func (n *Node) Put(args *args.KVArgs, result *[]byte) error {
+func (n *ServerNode) Put(args *args.KVArgs, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -137,7 +128,7 @@ func (n *Node) Put(args *args.KVArgs, result *[]byte) error {
 	return err
 }
 
-func (n *Node) Get(key []byte, result *[]byte) error {
+func (n *ServerNode) Get(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -146,7 +137,7 @@ func (n *Node) Get(key []byte, result *[]byte) error {
 	return err
 }
 
-func (n *Node) Delete(key []byte, result *[]byte) error {
+func (n *ServerNode) Delete(key []byte, result *[]byte) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 

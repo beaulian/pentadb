@@ -1,4 +1,4 @@
-package client
+package pentadb
 
 import (
 	"crypto/md5"

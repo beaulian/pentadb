@@ -37,14 +37,11 @@ import (
 	"net"
 	"fmt"
 	"flag"
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/shenaishiren/pentadb/rpc"
-	"github.com/shenaishiren/pentadb/opt"
-	"github.com/shenaishiren/pentadb/server"
-	"github.com/shenaishiren/pentadb/log"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var LOG = log.DefaultLog
+const defaultPath = "/var/lib/pentadb"
 
 var helpPrompt = `Usage: pentadb [--port <port>] [--path <path>] [options]
 
@@ -57,11 +54,11 @@ Options:
 `
 
 type Server struct {
-	Node *server.Node
+	Node *ServerNode
 }
 
 func (s *Server) listen(port string, path string) {
-	s.Node = server.NewNode(":" + port)
+	s.Node = NewServerNode(":" + port)
 	db, err := leveldb.OpenFile(path, nil)
 
 	if err != nil {
@@ -97,7 +94,7 @@ func main() {
 	)
 	flag.BoolVar(&help, "h", false, "Display this help message and exit")
 	flag.StringVar(&port, "p", "4567", "The port to listen on (default: 4567)")
-	flag.StringVar(&path, "a", opt.DeafultPath, "The path to use for the LevelDB store")
+	flag.StringVar(&path, "a", defaultPath, "The path to use for the LevelDB store")
 
 	// change default usage
 	flag.Usage = func() {
@@ -107,7 +104,7 @@ func main() {
 	// run
 	flag.Parse()
 
-	// help command
+	// help server
 	if help {
 		fmt.Print(helpPrompt)
 	} else {

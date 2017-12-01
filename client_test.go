@@ -1,6 +1,6 @@
 // This is test file for client.go
 
-package client
+package pentadb
 
 import (
 	"testing"
@@ -16,10 +16,10 @@ import (
 
 func TestNewClient(t *testing.T) {
 	var nodes = []string{
-		"10.20.204.75:4567",
-		"10.19.126.55:4567",
+		"10.20.205.26:4567",
+		//"10.19.126.55:4567",
 	}
-	client, err := NewClient(nodes, nil, 1)
+	client, err := NewClient(nodes, nil, 0)
 	if err != nil {
 		t.Error(err.Error())
 		return

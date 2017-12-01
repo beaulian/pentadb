@@ -32,24 +32,31 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package client
+package pentadb
 
 import (
 	"sync"
-	"github.com/shenaishiren/pentadb/opt"
+	"time"
+
 	"github.com/shenaishiren/pentadb/args"
 	nrpc "github.com/shenaishiren/pentadb/rpc"
 )
 
+const (
+	defaultProtocol = "tcp"
+	defaultTimeout = 3 * time.Second
+)
+// end
+
 type NodeProxy struct {
 	// client-side node
-	node *Node
+	node *ClientNode
 
 	mu *sync.Mutex
 }
 
-func NewNodeProxy(node *Node) *NodeProxy {
-	if !Reachable(node.Ipaddr, opt.DefaultTimeout) {
+func NewNodeProxy(node *ClientNode) *NodeProxy {
+	if !Reachable(node.Ipaddr, defaultTimeout) {
 		return nil
 	}
 	return &NodeProxy{
@@ -59,7 +66,7 @@ func NewNodeProxy(node *Node) *NodeProxy {
 }
 
 func (np *NodeProxy) call(serviceMethod string, args interface{}, unreachableChan chan string) []byte {
-	client, err := nrpc.DialTimeout(opt.DefaultProtocol, np.node.Ipaddr, opt.DefaultTimeout)
+	client, err := nrpc.DialTimeout(defaultProtocol, np.node.Ipaddr, defaultTimeout)
 	if err != nil {
 		LOG.Errorf("node %s is unreachable: %s", np.node.Ipaddr, err.Error())
 		unreachableChan <- np.node.Name
@@ -90,26 +97,26 @@ func (np *NodeProxy) Init(nodeIpaddrs []string, replicas int, unreachableChan ch
 		OtherNodes: otherNodes,
 		Replicas: replicas,
 	}
-	np.call("Node.Init", args, unreachableChan)
+	np.call("ServerNode.Init", args, unreachableChan)
 }
 
 func (np *NodeProxy) AddNode(nodeIpaddr string, unreachableChan chan string) {
-	np.call("Node.AddNode", nodeIpaddr, unreachableChan)
+	np.call("ServerNode.AddNode", nodeIpaddr, unreachableChan)
 }
 
 func (np *NodeProxy) RemoveNode(nodeIpaddr string, unreachableChan chan string) {
-	np.call("Node.RemoveNode", nodeIpaddr, unreachableChan)
+	np.call("ServerNode.RemoveNode", nodeIpaddr, unreachableChan)
 }
 
 func (np *NodeProxy) Put(key []byte, value []byte, unreachableChan chan string) {
 	kvArgs := &args.KVArgs{Key:key, Value: value}
-	np.call("Node.Put", kvArgs, unreachableChan)
+	np.call("ServerNode.Put", kvArgs, unreachableChan)
 }
 
 func (np *NodeProxy) Get(key []byte, unreachableChan chan string) []byte {
-	return np.call("Node.Get", key, unreachableChan)
+	return np.call("ServerNode.Get", key, unreachableChan)
 }
 
 func (np *NodeProxy) Delete(key []byte, unreachableChan chan string) {
-	np.call("Node.Delete", key, unreachableChan)
+	np.call("ServerNode.Delete", key, unreachableChan)
 }

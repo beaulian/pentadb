@@ -35,7 +35,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package client
+package pentadb
 
 import (
 	"time"
@@ -43,7 +43,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-type Node struct {
+type ClientNode struct {
 	// The name of node, maybe used for some commands
 	// like `pentadb nodes list`
 	Name string
@@ -61,8 +61,8 @@ type Node struct {
 	Proxy *NodeProxy
 }
 
-func NewNode(ipaddr string, weight int) *Node {
-	node := &Node{
+func NewNode(ipaddr string, weight int) *ClientNode {
+	node := &ClientNode{
 		Name:     uuid.NewV1().String(),
 		Ipaddr:   ipaddr,
 		Ctime:    time.Now(),

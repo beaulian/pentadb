@@ -32,7 +32,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package client
+package pentadb
 
 import (
 	"math/rand"
@@ -40,6 +40,7 @@ import (
 	"errors"
 	"bytes"
 	"strings"
+
 	"github.com/seiflotfy/cuckoofilter"
 )
 
@@ -52,7 +53,7 @@ const (
 type VNode struct {
 	Hash uint32          // identifier
 	Forward []*VNode     // point to forward nodes
-	rNode *Node          // real server, in order to contact the physical server
+	rNode *ClientNode    // real server, in order to contact the physical server
 }
 
 
@@ -66,7 +67,7 @@ type HashRing struct {
 	filter *cuckoofilter.CuckooFilter // cuckoo filter, ensure every node is unique
 }
 
-func NewVNode(node *Node, hash uint32, level int) *VNode {
+func NewVNode(node *ClientNode, hash uint32, level int) *VNode {
 	return &VNode {
 		Hash:    hash,
 		Forward: make([]*VNode, level),
@@ -91,7 +92,7 @@ func (hr *HashRing) getVNodeCount(weight int) int {
 }
 
 // create a hash ring
-func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error) {
+func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*ClientNode, error) {
 	nodesCount := len(nodes)
 	// check weights and initialize it
 	if len(weights) == 0 {
@@ -107,7 +108,7 @@ func (hr *HashRing) init(nodes []string, weights map[string]int) ([]*Node, error
 	}
 	hr.averageWeight = float64(totalWeight) / float64(nodesCount)
 	// generate ring
-	var rNodes []*Node
+	var rNodes []*ClientNode
 	for _, node := range nodes {
 		weight := weights[node]
 		rNode := hr.addNode(node, weight)
@@ -135,7 +136,7 @@ func (hr *HashRing) randomLevel() int {
 }
 
 // add server to hash ring
-func (hr *HashRing) insertNode(rNode *Node, hash uint32) error {
+func (hr *HashRing) insertNode(rNode *ClientNode, hash uint32) error {
 	// record the server that are inserted into the location per level
 	node := hr.header
 	update := make(map[int]*VNode)
@@ -179,7 +180,7 @@ func (hr *HashRing) genKey(v ...string) []byte {
 	return b.Bytes()
 }
 
-func (hr *HashRing) addNode(nodeIpaddr string, weight int) *Node {
+func (hr *HashRing) addNode(nodeIpaddr string, weight int) *ClientNode {
 	// check whether exist or not
 	nodeIp := strings.Split(nodeIpaddr, ":")[0]
 	if hr.filter.Lookup([]byte(nodeIp)) {

@@ -31,22 +31,24 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package client
+package pentadb
 
 import (
 	"fmt"
 	"errors"
-	"github.com/shenaishiren/pentadb/opt"
 	"github.com/shenaishiren/pentadb/log"
+)
+
+const (
+	defaultReplicas = 0                 // default replicas for raft algorithm
+	maxn = 1024
 )
 
 var LOG = log.DefaultLog
 
-const MAXN = 1024
-
 type Client struct {
 	// all nodes in hash ring
-	nodes map[string]*Node
+	nodes map[string]*ClientNode
 
 	// hash ring
 	hashRing *HashRing
@@ -59,27 +61,27 @@ func NewClient(nodeIpaddrs []string, weights map[string]int, replicas int) (*Cli
 	// check nodes' count
 	nodesCount := len(nodeIpaddrs)
 	// TODO
-	if nodesCount < opt.DefaultReplicas + 1 {
+	if nodesCount < defaultReplicas + 1 {
 		return nil, errors.New(
-			fmt.Sprintf("nodes must be > %d", opt.DefaultReplicas),
+			fmt.Sprintf("nodes must be > %d", defaultReplicas),
 		)
 	}
 	// TODO
-	if replicas > nodesCount || replicas < opt.DefaultReplicas {
+	if replicas > nodesCount || replicas < defaultReplicas {
 		return nil, errors.New(
-			fmt.Sprintf("replicas must > %d and < %d", opt.DefaultReplicas, nodesCount),
+			fmt.Sprintf("replicas must > %d and < %d", defaultReplicas, nodesCount),
 		)
 	}
 	// initialize hash ring
 	hashRing := NewHashRing()
 	// check whether the ip address is connectable or not in `init` function
 	nodes, _ := hashRing.init(nodeIpaddrs, weights)
-	nodeDict := make(map[string]*Node)
+	nodeDict := make(map[string]*ClientNode)
 	// initialize client
 	client := &Client{
 		nodes: nodeDict,
 		hashRing: hashRing,
-		unreachableChan: make(chan string, MAXN),
+		unreachableChan: make(chan string, maxn),
 	}
 	for _, node := range nodes {
 		nodeDict[node.Name] = node
